@@ -16,7 +16,7 @@ export const getCurrentDayOfWeek = (): DayOfWeek => {
   return getDayOfWeekFromDate(todayStr);
 };
 
-export const useMenuViewModel = (restaurantId: string, initialDate?: string) => {
+export const useMenuViewModel = (restaurantSlug: string, initialDate?: string) => {
   // We keep the actual calendar date state (YYYY-MM-DD)
   const [date, setDateState] = useState<string>(
     initialDate || new Date().toISOString().split('T')[0]
@@ -31,31 +31,41 @@ export const useMenuViewModel = (restaurantId: string, initialDate?: string) => 
     return getDayOfWeekFromDate(date);
   }, [date]);
 
-  // Load restaurant details & design preferences
+  // Load restaurant details by its custom URL slug
   useEffect(() => {
     let active = true;
+    setLoading(true);
     const loadRestaurant = async () => {
       try {
-        const res = await MenuService.getRestaurant(restaurantId);
-        if (active && res) {
-          setRestaurant(res);
+        const res = await MenuService.getRestaurantBySlug(restaurantSlug);
+        if (active) {
+          if (res) {
+            setRestaurant(res);
+          } else {
+            setError('No se encontró el restaurante solicitado.');
+            setLoading(false);
+          }
         }
       } catch (err: any) {
         console.error('Error loading restaurant details:', err);
+        if (active) {
+          setError('Error cargando los detalles del restaurante.');
+          setLoading(false);
+        }
       }
     };
     loadRestaurant();
     return () => {
       active = false;
     };
-  }, [restaurantId]);
+  }, [restaurantSlug]);
 
-  // Load daily menu for the resolved weekday
-  const loadMenu = useCallback(async (targetDay: DayOfWeek) => {
+  // Load daily menu for the resolved weekday using the resolved restaurant's database ID
+  const loadMenu = useCallback(async (targetDay: DayOfWeek, actualResId: string) => {
     setLoading(true);
     setError(null);
     try {
-      const dailyMenu = await MenuService.getMenuByDay(restaurantId, targetDay);
+      const dailyMenu = await MenuService.getMenuByDay(actualResId, targetDay);
       setMenu(dailyMenu);
     } catch (err: any) {
       setError(err.message || 'Error cargando el menú del día');
@@ -63,11 +73,13 @@ export const useMenuViewModel = (restaurantId: string, initialDate?: string) => 
     } finally {
       setLoading(false);
     }
-  }, [restaurantId]);
+  }, []);
 
   useEffect(() => {
-    loadMenu(resolvedDay);
-  }, [resolvedDay, loadMenu]);
+    if (restaurant) {
+      loadMenu(resolvedDay, restaurant.id);
+    }
+  }, [resolvedDay, restaurant, loadMenu]);
 
   const setDate = (newDate: string) => {
     setDateState(newDate);
@@ -92,7 +104,7 @@ export const useMenuViewModel = (restaurantId: string, initialDate?: string) => 
     setDate,
     goToNextDay,
     goToPreviousDay,
-    refresh: () => loadMenu(resolvedDay),
+    refresh: () => restaurant && loadMenu(resolvedDay, restaurant.id),
   };
 };
 export type UseMenuViewModelReturn = ReturnType<typeof useMenuViewModel>;

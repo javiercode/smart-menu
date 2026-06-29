@@ -86,11 +86,11 @@ export const useAdminViewModel = () => {
     }
   };
 
-  const register = async (email: string, password: string, restaurantName: string) => {
+  const register = async (email: string, password: string, restaurantName: string, inviteCode: string) => {
     setLoadingAction(true);
     setError(null);
     try {
-      const profile = await AuthService.signUp(email, password, restaurantName);
+      const profile = await AuthService.signUp(email, password, restaurantName, inviteCode);
       setUser(profile);
       return profile;
     } catch (err: any) {
@@ -137,8 +137,14 @@ export const useAdminViewModel = () => {
     }
   };
 
-  // Update Restaurant settings (White-label styling)
-  const saveRestaurantSettings = async (name: string, primaryColor: string, secondaryColor: string, showVoiceAssistant: boolean) => {
+  // Update Restaurant settings (White-label styling & slug)
+  const saveRestaurantSettings = async (
+    name: string, 
+    primaryColor: string, 
+    secondaryColor: string, 
+    showVoiceAssistant: boolean,
+    slug: string
+  ) => {
     if (!user || !user.restaurantId || !restaurant) {
       throw new Error('No hay sesión de restaurante activa.');
     }
@@ -150,7 +156,8 @@ export const useAdminViewModel = () => {
         name,
         primaryColor,
         secondaryColor,
-        showVoiceAssistant
+        showVoiceAssistant,
+        slug
       };
       await MenuService.saveRestaurant(updatedRestaurant);
       setRestaurant(updatedRestaurant);

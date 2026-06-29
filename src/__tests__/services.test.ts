@@ -19,6 +19,18 @@ class MockAuthService implements IAuthService {
       role: 'admin'
     };
     localStorage.setItem(this.usersKey, JSON.stringify([{ ...defaultUser, password: 'password123' }]));
+    
+    // Seed default demo restaurant with a custom slug
+    const defaultRestaurant: Restaurant = {
+      id: 'rest_mock_123',
+      slug: 'restaurante-el-sabor-demo',
+      name: 'Restaurante El Sabor Demo',
+      email: 'admin@demo.com',
+      primaryColor: '#2e7d32',
+      secondaryColor: '#ed6c02',
+      showVoiceAssistant: true
+    };
+    localStorage.setItem(`smartmenu_test_restaurant_rest_mock_123`, JSON.stringify(defaultRestaurant));
   }
 
   private getStoredUsers() {
@@ -50,12 +62,18 @@ class MockAuthService implements IAuthService {
     return profile;
   }
 
-  async signUp(email: string, password: string, restaurantName: string): Promise<UserProfile> {
+  async signUp(email: string, password: string, restaurantName: string, inviteCode: string): Promise<UserProfile> {
     const users = this.getStoredUsers();
     if (users.some((u: any) => u.email.toLowerCase() === email.toLowerCase())) {
       throw new Error('El correo ya está registrado.');
     }
     
+    // Mock B2B Invitation Code Gate
+    const trimmedCode = inviteCode.trim();
+    if (trimmedCode !== 'DEMO-CODE-2026' && !trimmedCode.startsWith('SMART-INVITE-')) {
+      throw new Error('Código de invitación inválido. Por favor contáctese con el administrador.');
+    }
+
     const uid = `mock_user_${Date.now()}`;
     const restaurantId = `rest_mock_${Date.now()}`;
     
@@ -71,10 +89,12 @@ class MockAuthService implements IAuthService {
     
     const newRestaurant: Restaurant = {
       id: restaurantId,
+      slug: restaurantName.toLowerCase().replace(/\s+/g, '-'),
       name: restaurantName,
       email: email,
       primaryColor: '#1976d2',
-      secondaryColor: '#dc004e'
+      secondaryColor: '#dc004e',
+      showVoiceAssistant: true
     };
     localStorage.setItem(`smartmenu_test_restaurant_${restaurantId}`, JSON.stringify(newRestaurant));
     
@@ -113,6 +133,22 @@ class MockMenuService implements IMenuService {
     return raw ? JSON.parse(raw) : null;
   }
 
+  async getRestaurantBySlug(slug: string): Promise<Restaurant | null> {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(this.restaurantKeyPrefix)) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const rest = JSON.parse(raw) as Restaurant;
+          if (rest.slug === slug) {
+            return rest;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   async saveRestaurant(restaurant: Restaurant): Promise<void> {
     localStorage.setItem(`${this.restaurantKeyPrefix}${restaurant.id}`, JSON.stringify(restaurant));
   }
@@ -142,7 +178,7 @@ describe('SmartMenu Pro - Local Environments Unit Tests', () => {
 
     it('should successfully register new B2B restaurant tenants and credentials', async () => {
       const email = 'chef@michelin.com';
-      const user = await AuthService.signUp(email, 'starpass123', 'Michelin Star Bistro');
+      const user = await AuthService.signUp(email, 'starpass123', 'Michelin Star Bistro', 'SMART-INVITE-1');
       
       expect(user).toBeDefined();
       expect(user.email).toBe(email);
@@ -151,6 +187,7 @@ describe('SmartMenu Pro - Local Environments Unit Tests', () => {
       const rest = await MenuService.getRestaurant(user.restaurantId!);
       expect(rest).toBeDefined();
       expect(rest?.name).toBe('Michelin Star Bistro');
+      expect(rest?.slug).toBe('michelin-star-bistro');
     });
   });
 

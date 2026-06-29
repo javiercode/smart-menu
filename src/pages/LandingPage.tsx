@@ -54,8 +54,8 @@ export const LandingPage: React.FC = () => {
 
   const [searchParams] = useSearchParams();
   
-  // Default to the seeded 'rest_mock_123' if no tenant is provided in query params
-  const restaurantId = searchParams.get('r') || 'rest_mock_123';
+  // Default to the live Firebase seeded 'restaurante-el-sabor-demo' if no tenant is provided in query params
+  const restaurantId = searchParams.get('r') || 'restaurante-el-sabor-demo';
   
   const {
     date,
@@ -477,11 +477,25 @@ export const LandingPage: React.FC = () => {
 
             {/* Direct Client-side Link to Admin Area (Safe from 404s) */}
             <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-              <Link to="/admin" style={{ textDecoration: 'none' }}>
-                <Typography variant="caption" color="primary" sx={{ fontWeight: 600, fontSize: '0.75rem', opacity: 0.8, '&:hover': { textDecoration: 'underline', opacity: 1 } }}>
-                  🔑 Acceso Administrador (Panel de Control)
-                </Typography>
-              </Link>
+              <Button
+                component={Link}
+                to="/admin"
+                variant="outlined"
+                color="primary"
+                size="small"
+                sx={{ 
+                  borderRadius: 3, 
+                  textTransform: 'none', 
+                  fontWeight: 600, 
+                  fontSize: '0.75rem',
+                  px: 2.5,
+                  py: 0.5,
+                  opacity: 0.85,
+                  '&:hover': { opacity: 1, bgcolor: 'rgba(25, 118, 210, 0.04)' }
+                }}
+              >
+                🔑 Acceso Administrador (Panel de Control)
+              </Button>
             </Box>
           </Container>
         </Box>

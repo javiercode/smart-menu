@@ -44,6 +44,8 @@ import {
 } from '@mui/icons-material';
 import { useAdminViewModel } from '../features/admin/hooks/useAdminViewModel';
 import { DAYS_ORDER } from '../features/menu/hooks/useMenuViewModel';
+import { MenuService } from '../services/MenuService';
+import { generateSlug } from '../services/AuthService';
 import type { MenuItem, DayOfWeek } from '../core/types';
 import { isFirebaseConfigured } from '../core/firebase/config';
 
@@ -112,6 +114,7 @@ export const AdminPage: React.FC = () => {
 
   // Branding configuration local state
   const [brandName, setBrandName] = useState<string>('');
+  const [brandSlug, setBrandSlug] = useState<string>('');
   const [brandPrimary, setBrandPrimary] = useState<string>('');
   const [brandSecondary, setBrandSecondary] = useState<string>('');
   const [showVoice, setShowVoice] = useState<boolean>(true);
@@ -142,39 +145,59 @@ export const AdminPage: React.FC = () => {
   React.useEffect(() => {
     if (restaurant) {
       setBrandName(restaurant.name);
+      setBrandSlug(restaurant.slug || '');
       setBrandPrimary(restaurant.primaryColor || '#1976d2');
       setBrandSecondary(restaurant.secondaryColor || '#dc004e');
       setShowVoice(restaurant.showVoiceAssistant !== false);
     }
   }, [restaurant]);
 
-  // Fill in demo account details for easy testing
-  const handleFillDemo = () => {
+  // One-click B2B demo onboarding for live Firebase (Auto-register or Auto-login fallback)
+  const handleFillDemo = async () => {
+    setIsRegister(true);
+    setAuthRestName('Restaurante El Sabor Demo');
     setAuthEmail('admin@demo.com');
     setAuthPassword('password123');
-    setIsRegister(false);
+    setAuthRegCode('DEMO-CODE-2026');
+    
+    clearError();
+    try {
+      // First attempt: try to register the demo account (works on fresh database runs!)
+      await register('admin@demo.com', 'password123', 'Restaurante El Sabor Demo', 'DEMO-CODE-2026');
+    } catch (regErr: any) {
+      // If email already exists, automatically fallback to logging in!
+      if (
+        regErr.code === 'auth/email-already-in-use' || 
+        regErr.code === 'auth/already-initialized' ||
+        (regErr.message && regErr.message.includes('already')) ||
+        (regErr.message && regErr.message.includes('en uso')) ||
+        (regErr.message && regErr.message.includes('registrado'))
+      ) {
+        try {
+          setIsRegister(false); // Switch UI to login view
+          await login('admin@demo.com', 'password123');
+        } catch (loginErr: any) {
+          alert('Error al iniciar sesión en el demo: ' + loginErr.message);
+        }
+      } else {
+        alert('Error al crear el demo: ' + regErr.message);
+      }
+    }
   };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
     
-    if (isRegister) {
-      const requiredCode = import.meta.env.VITE_CODE_REGISTER || 'SMART2026';
-      if (authRegCode !== requiredCode) {
-        alert('El código de invitación ingresado es inválido. Por favor contáctese con el administrador mediante nuestro canal de WhatsApp en la página principal para solicitar su código.');
-        return;
-      }
-    }
-    
     try {
       if (isRegister) {
-        await register(authEmail, authPassword, authRestName);
+        await register(authEmail, authPassword, authRestName, authRegCode);
       } else {
         await login(authEmail, authPassword);
       }
-    } catch (err) {
-      // Errors are handled in the ViewModel state
+    } catch (err: any) {
+      // Show specific firebase errors nicely via alert if registration fails
+      alert(err.message || 'Error en el proceso de autenticación');
     }
   };
 
@@ -189,10 +212,25 @@ export const AdminPage: React.FC = () => {
 
   const handleSaveBranding = async () => {
     try {
-      await saveRestaurantSettings(brandName, brandPrimary, brandSecondary, showVoice);
+      const cleanSlug = generateSlug(brandSlug);
+      if (!cleanSlug) {
+        alert('Por favor ingrese un enlace personalizado (slug) válido.');
+        return;
+      }
+
+      // Verify custom slug uniqueness if modified
+      if (cleanSlug !== restaurant?.slug) {
+        const existing = await MenuService.getRestaurantBySlug(cleanSlug);
+        if (existing) {
+          alert(`El enlace personalizado "${cleanSlug}" ya está en uso por otro restaurante. Elija un nombre diferente.`);
+          return;
+        }
+      }
+
+      await saveRestaurantSettings(brandName, brandPrimary, brandSecondary, showVoice, cleanSlug);
       alert('¡Configuración de marca guardada con éxito!');
     } catch (err) {
-      alert('Error guardando la configuración.');
+      alert('Error guardando la configuración de marca.');
     }
   };
 
@@ -286,7 +324,7 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  // URL link to the client menu
+  // URL link to the client menu (uses custom slug dynamically)
   const menuPublicLink = useMemo(() => {
     if (!restaurant) return '';
     const path = window.location.pathname;
@@ -296,7 +334,7 @@ export const AdminPage: React.FC = () => {
       const repoName = path.split('/')[1];
       base = repoName ? `/${repoName}` : '';
     }
-    return `${window.location.origin}${base}/?r=${restaurant.id}`;
+    return `${window.location.origin}${base}/?r=${restaurant.slug}`;
   }, [restaurant]);
 
   // QR Code generator URL
@@ -488,8 +526,8 @@ export const AdminPage: React.FC = () => {
           <Typography variant="h5" sx={{ fontWeight: 800 }}>
             {restaurant?.name || 'Cargando marca...'}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            ID de Restaurante: <code>{restaurant?.id}</code> | Rol: {user.role === 'admin' ? 'Administrador' : 'Colaborador'}
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+            Rol: {user.role === 'admin' ? 'Administrador' : 'Colaborador'}
           </Typography>
         </Box>
         <Stack direction="row" spacing={1.5}>
@@ -674,7 +712,7 @@ export const AdminPage: React.FC = () => {
               <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Configuración de Marca Blanca</Typography>
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-              Configura cómo se verá tu menú digital para tus clientes. Modifica el nombre y los colores principales del sistema. El panel del cliente se adaptará inmediatamente.
+              Configura cómo se verá tu menú digital para tus clientes. Modifica el nombre, el enlace personalizado y los colores principales del sistema. El panel del cliente se adaptará inmediatamente.
             </Typography>
 
             <Grid container spacing={4}>
@@ -685,6 +723,14 @@ export const AdminPage: React.FC = () => {
                     fullWidth
                     value={brandName}
                     onChange={(e) => setBrandName(e.target.value)}
+                  />
+
+                  <TextField
+                    label="Enlace Personalizado (URL Slug)"
+                    fullWidth
+                    value={brandSlug}
+                    onChange={(e) => setBrandSlug(generateSlug(e.target.value))}
+                    helperText={`Tu menú se publicará en: ${window.location.origin}/?r=${brandSlug}`}
                   />
                   
                   <Box>
@@ -811,7 +857,7 @@ export const AdminPage: React.FC = () => {
                       Los asistentes de voz se conectan mediante HTTPS. Tu base de datos Firebase expone una Cloud Function con el siguiente JSON formateado para Skills:
                     </Typography>
                     <Paper component="pre" variant="outlined" sx={{ p: 2, borderRadius: 3, bgcolor: '#f4f6f8', overflowX: 'auto', fontSize: '0.8rem' }}>
-{`GET /api/voice-menu?r=${restaurant?.id}&day=lunes
+{`GET /api/voice-menu?r=${restaurant?.slug}&day=lunes
 Response JSON:
 {
   "speech": "El lunes en ${restaurant?.name || 'el restaurante'} ofrecemos: ${localItems.length > 0 ? localItems.slice(0, 3).map(i => i.name).join(', ') : 'nuestros platos tradicionales'}. ¡Que disfrutes!"

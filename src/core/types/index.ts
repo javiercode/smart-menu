@@ -19,6 +19,7 @@ export interface DailyMenu {
 
 export interface Restaurant {
   id: string;
+  slug: string; // The unique B2C friendly URL slug
   name: string;
   logoUrl?: string;
   primaryColor?: string; // Theme styling (White-label)

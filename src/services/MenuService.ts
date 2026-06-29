@@ -1,7 +1,12 @@
 import { 
   doc, 
   getDoc, 
-  setDoc, 
+  setDoc,
+  query,
+  collection,
+  where,
+  getDocs,
+  limit,
 } from 'firebase/firestore';
 import { db as fbDb } from '../core/firebase/config';
 import type { DailyMenu, Restaurant, DayOfWeek } from '../core/types';
@@ -10,6 +15,7 @@ export interface IMenuService {
   getMenuByDay(restaurantId: string, day: DayOfWeek): Promise<DailyMenu | null>;
   saveMenu(restaurantId: string, menu: DailyMenu): Promise<void>;
   getRestaurant(restaurantId: string): Promise<Restaurant | null>;
+  getRestaurantBySlug(slug: string): Promise<Restaurant | null>;
   saveRestaurant(restaurant: Restaurant): Promise<void>;
 }
 
@@ -43,6 +49,16 @@ class FirebaseMenuService implements IMenuService {
     const snap = await getDoc(docRef);
     if (snap.exists()) {
       return snap.data() as Restaurant;
+    }
+    return null;
+  }
+
+  async getRestaurantBySlug(slug: string): Promise<Restaurant | null> {
+    if (!fbDb) throw new Error('Firestore no está inicializado.');
+    const q = query(collection(fbDb, 'restaurants'), where('slug', '==', slug), limit(1));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      return snap.docs[0].data() as Restaurant;
     }
     return null;
   }
