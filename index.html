@@ -12,14 +12,20 @@
           var decoded = l.search.slice(1).split('&').map(function(s) { 
             return s.replace(/~and~/g, '&')
           }).join('?');
+          
+          var cleanPath = l.pathname;
+          if (cleanPath.endsWith('/')) {
+            cleanPath = cleanPath.slice(0, -1);
+          }
+          
           window.history.replaceState(null, null,
-              l.pathname.slice(0, -1) + decoded + l.hash
+              cleanPath + decoded + l.hash
           );
         }
       }(window.location));
     </script>
     <!-- End Single Page Apps for GitHub Pages Redirect Handler -->
-    <script type="module" crossorigin src="./assets/index-B0YMI4B1.js"></script>
+    <script type="module" crossorigin src="./assets/index-BBx0w2nu.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-Bw6w55xB.css">
   </head>
   <body>
