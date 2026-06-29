@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { 
   Container, 
   Box, 
@@ -472,6 +472,15 @@ export const LandingPage: React.FC = () => {
                 ¡Créalo gratis aquí!
               </Button>
             </Typography>
+
+            {/* Direct Client-side Link to Admin Area (Safe from 404s) */}
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+              <Link to="/admin" style={{ textDecoration: 'none' }}>
+                <Typography variant="caption" color="primary" sx={{ fontWeight: 600, fontSize: '0.75rem', opacity: 0.8, '&:hover': { textDecoration: 'underline', opacity: 1 } }}>
+                  🔑 Acceso Administrador (Panel de Control)
+                </Typography>
+              </Link>
+            </Box>
           </Container>
         </Box>
       </Box>
