@@ -108,11 +108,13 @@ export const AdminPage: React.FC = () => {
   const [authEmail, setAuthEmail] = useState<string>('');
   const [authPassword, setAuthPassword] = useState<string>('');
   const [authRestName, setAuthRestName] = useState<string>('');
+  const [authRegCode, setAuthRegCode] = useState<string>('');
 
   // Branding configuration local state
   const [brandName, setBrandName] = useState<string>('');
   const [brandPrimary, setBrandPrimary] = useState<string>('');
   const [brandSecondary, setBrandSecondary] = useState<string>('');
+  const [showVoice, setShowVoice] = useState<boolean>(true);
 
   // Local menu items copy for editing (so we can add/remove plates locally before batch saving)
   const [localItems, setLocalItems] = useState<MenuItem[]>([]);
@@ -142,6 +144,7 @@ export const AdminPage: React.FC = () => {
       setBrandName(restaurant.name);
       setBrandPrimary(restaurant.primaryColor || '#1976d2');
       setBrandSecondary(restaurant.secondaryColor || '#dc004e');
+      setShowVoice(restaurant.showVoiceAssistant !== false);
     }
   }, [restaurant]);
 
@@ -154,6 +157,16 @@ export const AdminPage: React.FC = () => {
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
+    
+    if (isRegister) {
+      const requiredCode = import.meta.env.VITE_CODE_REGISTER || 'SMART2026';
+      if (authRegCode !== requiredCode) {
+        alert('El código de invitación ingresado es inválido. Por favor contáctese con el administrador mediante nuestro canal de WhatsApp en la página principal para solicitar su código.');
+        return;
+      }
+    }
+    
     try {
       if (isRegister) {
         await register(authEmail, authPassword, authRestName);
@@ -165,9 +178,18 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  const handleContactAdminWhatsApp = () => {
+    const adminWhatsAppNumber = import.meta.env.VITE_ADMIN_WHATSAPP_NUMBER || '51999999999';
+    const cleanNumber = adminWhatsAppNumber.replace(/[^0-9]/g, '');
+    const prefilledText = `¡Hola! Me gustaría registrar mi restaurante en SmartMenu Pro pero no tengo un código de invitación B2B. ¿Podrían proporcionarme un código de acceso o brindarme más información?`;
+
+    const whatsAppLink = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(prefilledText)}`;
+    window.open(whatsAppLink, '_blank');
+  };
+
   const handleSaveBranding = async () => {
     try {
-      await saveRestaurantSettings(brandName, brandPrimary, brandSecondary);
+      await saveRestaurantSettings(brandName, brandPrimary, brandSecondary, showVoice);
       alert('¡Configuración de marca guardada con éxito!');
     } catch (err) {
       alert('Error guardando la configuración.');
@@ -267,7 +289,14 @@ export const AdminPage: React.FC = () => {
   // URL link to the client menu
   const menuPublicLink = useMemo(() => {
     if (!restaurant) return '';
-    return `${window.location.origin}/?r=${restaurant.id}`;
+    const path = window.location.pathname;
+    const hostname = window.location.hostname;
+    let base = '';
+    if (hostname.endsWith('.github.io')) {
+      const repoName = path.split('/')[1];
+      base = repoName ? `/${repoName}` : '';
+    }
+    return `${window.location.origin}${base}/?r=${restaurant.id}`;
   }, [restaurant]);
 
   // QR Code generator URL
@@ -300,90 +329,139 @@ export const AdminPage: React.FC = () => {
         sx={{ 
           minHeight: '100vh', 
           display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          bgcolor: '#f4f6f8',
-          py: 4
+          flexDirection: 'column',
+          bgcolor: '#f4f6f8'
         }}
       >
-        <Container maxWidth="xs">
-          <Paper elevation={4} sx={{ p: 4, borderRadius: 5, textAlign: 'center', bgcolor: 'white' }}>
-            <Avatar sx={{ width: 60, height: 60, mx: 'auto', mb: 2, bgcolor: 'primary.main' }}>
-              <Lock />
-            </Avatar>
-            <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 800 }}>
-              SmartMenu Admin
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              {isRegister 
-                ? 'Registra tu restaurante y genera tu menú digital' 
-                : 'Inicia sesión para gestionar tus platos en tiempo real'}
-            </Typography>
+        {/* Main Centered Auth Form */}
+        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
+          <Container maxWidth="xs">
+            <Paper elevation={4} sx={{ p: 4, borderRadius: 5, textAlign: 'center', bgcolor: 'white' }}>
+              <Avatar sx={{ width: 60, height: 60, mx: 'auto', mb: 2, bgcolor: 'primary.main' }}>
+                <Lock />
+              </Avatar>
+              <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 800 }}>
+                SmartMenu Admin
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                {isRegister 
+                  ? 'Registra tu restaurante y genera tu menú digital' 
+                  : 'Inicia sesión para gestionar tus platos en tiempo real'}
+              </Typography>
 
-            {error && <Alert severity="error" onClose={clearError} sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
+              {error && <Alert severity="error" onClose={clearError} sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
 
-            <Box component="form" onSubmit={handleAuthSubmit}>
-              <Stack spacing={2}>
-                {isRegister && (
+              <Box component="form" onSubmit={handleAuthSubmit}>
+                <Stack spacing={2}>
+                  {isRegister && (
+                    <>
+                      <TextField
+                        label="Nombre del Restaurante"
+                        fullWidth
+                        required
+                        value={authRestName}
+                        onChange={(e) => setAuthRestName(e.target.value)}
+                      />
+                      <TextField
+                        label="Código de Invitación B2B"
+                        fullWidth
+                        required
+                        value={authRegCode}
+                        onChange={(e) => setAuthRegCode(e.target.value)}
+                        placeholder="SMART2026 o el código de tu administrador"
+                      />
+                    </>
+                  )}
                   <TextField
-                    label="Nombre del Restaurante"
+                    label="Correo Electrónico"
+                    type="email"
                     fullWidth
                     required
-                    value={authRestName}
-                    onChange={(e) => setAuthRestName(e.target.value)}
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
                   />
-                )}
-                <TextField
-                  label="Correo Electrónico"
-                  type="email"
-                  fullWidth
-                  required
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                />
-                <TextField
-                  label="Contraseña"
-                  type="password"
-                  fullWidth
-                  required
-                  value={authPassword}
-                  onChange={(e) => setAuthPassword(e.target.value)}
-                />
+                  <TextField
+                    label="Contraseña"
+                    type="password"
+                    fullWidth
+                    required
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                  />
 
+                  <Button 
+                    type="submit" 
+                    variant="contained" 
+                    size="large" 
+                    disabled={loadingAction}
+                    sx={{ borderRadius: 3, py: 1.5, fontWeight: 'bold' }}
+                  >
+                    {loadingAction ? <CircularProgress size={24} /> : (isRegister ? 'Registrar Restaurante' : 'Iniciar Sesión')}
+                  </Button>
+                </Stack>
+              </Box>
+
+              <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <Button 
-                  type="submit" 
-                  variant="contained" 
-                  size="large" 
-                  disabled={loadingAction}
-                  sx={{ borderRadius: 3, py: 1.5, fontWeight: 'bold' }}
+                  variant="text" 
+                  onClick={() => { setIsRegister(!isRegister); clearError(); }} 
+                  sx={{ textTransform: 'none' }}
                 >
-                  {loadingAction ? <CircularProgress size={24} /> : (isRegister ? 'Registrar Restaurante' : 'Iniciar Sesión')}
+                  {isRegister ? '¿Ya tienes una cuenta? Inicia Sesión' : '¿No tienes cuenta? Registra tu restaurante'}
                 </Button>
-              </Stack>
-            </Box>
+                
+                <Divider sx={{ my: 1 }}>o usa el demo</Divider>
+                
+                <Button 
+                  variant="outlined" 
+                  color="secondary" 
+                  onClick={handleFillDemo}
+                  sx={{ textTransform: 'none', borderRadius: 3 }}
+                >
+                  Probar Demo (Autocompletar)
+                </Button>
+              </Box>
+            </Paper>
+          </Container>
+        </Box>
 
-            <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        {/* Footer Area with B2B Support */}
+        <Box 
+          component="footer" 
+          sx={{ 
+            bgcolor: 'white', 
+            py: 3, 
+            textAlign: 'center', 
+            borderTop: '1px solid #e0e0e0',
+            width: '100%',
+            mt: 'auto'
+          }}
+        >
+          <Container maxWidth="md">
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, fontWeight: 500 }}>
+              © 2026 SmartMenu Pro. Todos los derechos reservados.
+            </Typography>
+            <Typography variant="body2" color="text.primary" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
+              ¿Quieres un menú digital inteligente para tu negocio o necesitas ayuda con tu acceso?{' '}
               <Button 
                 variant="text" 
-                onClick={() => { setIsRegister(!isRegister); clearError(); }} 
-                sx={{ textTransform: 'none' }}
+                color="primary" 
+                onClick={handleContactAdminWhatsApp}
+                sx={{ 
+                  textTransform: 'none', 
+                  fontWeight: 'bold', 
+                  fontSize: 'inherit', 
+                  p: 0, 
+                  verticalAlign: 'baseline',
+                  textDecoration: 'underline',
+                  '&:hover': { textDecoration: 'underline', bgcolor: 'transparent' }
+                }}
               >
-                {isRegister ? '¿Ya tienes una cuenta? Inicia Sesión' : '¿No tienes cuenta? Registra tu restaurante'}
+                ¡Escríbenos por WhatsApp aquí!
               </Button>
-              
-              <Divider sx={{ my: 1 }}>o usa el demo</Divider>
-              
-              <Button 
-                variant="outlined" 
-                color="secondary" 
-                onClick={handleFillDemo}
-                sx={{ textTransform: 'none', borderRadius: 3 }}
-              >
-                Probar Demo (Autocompletar)
-              </Button>
-            </Box>
-          </Paper>
-        </Container>
+            </Typography>
+          </Container>
+        </Box>
       </Box>
     );
   }
@@ -623,6 +701,19 @@ export const AdminPage: React.FC = () => {
                       <Box component="input" type="color" value={brandSecondary} onChange={(e) => setBrandSecondary(e.target.value)} sx={{ width: 50, height: 40, border: 'none', borderRadius: 2, cursor: 'pointer' }} />
                       <TextField size="small" value={brandSecondary} onChange={(e) => setBrandSecondary(e.target.value)} />
                     </Box>
+                  </Box>
+
+                  <Box sx={{ mt: 1 }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox 
+                          checked={showVoice} 
+                          onChange={(e) => setShowVoice(e.target.checked)} 
+                          color="primary"
+                        />
+                      }
+                      label="Activar sección 'SmartMenu Voice Assistant' en menú público"
+                    />
                   </Box>
                 </Stack>
               </Grid>

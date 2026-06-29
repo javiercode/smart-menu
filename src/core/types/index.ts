@@ -25,6 +25,7 @@ export interface Restaurant {
   secondaryColor?: string;
   qrCodeUrl?: string;
   email: string;
+  showVoiceAssistant?: boolean; // Controls whether to display the Voice Spotlight Card on public menu
 }
 
 export interface UserProfile {

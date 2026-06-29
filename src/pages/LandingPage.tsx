@@ -362,8 +362,9 @@ export const LandingPage: React.FC = () => {
                 )}
 
                 {/* Omnichannel / Voice Assistant Skill Spotlight Card */}
-                <Paper 
-                  elevation={3} 
+                {restaurant?.showVoiceAssistant !== false && (
+                  <Paper 
+                    elevation={3} 
                   sx={{ 
                     mt: 6, 
                     p: 4, 
@@ -432,6 +433,7 @@ export const LandingPage: React.FC = () => {
                     </Grid>
                   </Grid>
                 </Paper>
+                )}
               </>
             )}
           </Container>

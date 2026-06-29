@@ -138,7 +138,7 @@ export const useAdminViewModel = () => {
   };
 
   // Update Restaurant settings (White-label styling)
-  const saveRestaurantSettings = async (name: string, primaryColor: string, secondaryColor: string) => {
+  const saveRestaurantSettings = async (name: string, primaryColor: string, secondaryColor: string, showVoiceAssistant: boolean) => {
     if (!user || !user.restaurantId || !restaurant) {
       throw new Error('No hay sesión de restaurante activa.');
     }
@@ -149,7 +149,8 @@ export const useAdminViewModel = () => {
         ...restaurant,
         name,
         primaryColor,
-        secondaryColor
+        secondaryColor,
+        showVoiceAssistant
       };
       await MenuService.saveRestaurant(updatedRestaurant);
       setRestaurant(updatedRestaurant);
