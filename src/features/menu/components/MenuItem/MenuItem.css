@@ -1,0 +1,22 @@
+.menu-item-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border-radius: 16px !important;
+}
+
+.menu-item-media-container {
+  overflow: hidden;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+
+.menu-item-media {
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.menu-item-card:hover .menu-item-media {
+  transform: scale(1.05);
+}

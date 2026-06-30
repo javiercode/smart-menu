@@ -34,18 +34,18 @@ import {
   Save, 
   ExitToApp, 
   QrCode, 
-  Palette, 
   RestaurantMenu, 
   CalendarToday, 
   Lock, 
   Mic, 
   OpenInNew,
+  Palette,
   CloudUpload
 } from '@mui/icons-material';
 import { useAdminViewModel } from '../features/admin/hooks/useAdminViewModel';
 import { DAYS_ORDER } from '../features/menu/hooks/useMenuViewModel';
-import { MenuService } from '../services/MenuService';
-import { generateSlug } from '../services/AuthService';
+import { BrandManager } from '../components/BrandManager';
+import { Footer } from '../components/Footer';
 import type { MenuItem, DayOfWeek } from '../core/types';
 import { isFirebaseConfigured } from '../core/firebase/config';
 
@@ -112,13 +112,6 @@ export const AdminPage: React.FC = () => {
   const [authRestName, setAuthRestName] = useState<string>('');
   const [authRegCode, setAuthRegCode] = useState<string>('');
 
-  // Branding configuration local state
-  const [brandName, setBrandName] = useState<string>('');
-  const [brandSlug, setBrandSlug] = useState<string>('');
-  const [brandPrimary, setBrandPrimary] = useState<string>('');
-  const [brandSecondary, setBrandSecondary] = useState<string>('');
-  const [showVoice, setShowVoice] = useState<boolean>(true);
-
   // Local menu items copy for editing (so we can add/remove plates locally before batch saving)
   const [localItems, setLocalItems] = useState<MenuItem[]>([]);
   const [hasMenuChanges, setLocalChanges] = useState<boolean>(false);
@@ -140,17 +133,6 @@ export const AdminPage: React.FC = () => {
       setLocalChanges(false);
     }
   }, [selectedMenu]);
-
-  // Synchronize branding details when fetched restaurant details change
-  React.useEffect(() => {
-    if (restaurant) {
-      setBrandName(restaurant.name);
-      setBrandSlug(restaurant.slug || '');
-      setBrandPrimary(restaurant.primaryColor || '#1976d2');
-      setBrandSecondary(restaurant.secondaryColor || '#dc004e');
-      setShowVoice(restaurant.showVoiceAssistant !== false);
-    }
-  }, [restaurant]);
 
   // One-click B2B demo onboarding for live Firebase (Auto-register or Auto-login fallback)
   const handleFillDemo = async () => {
@@ -198,39 +180,6 @@ export const AdminPage: React.FC = () => {
     } catch (err: any) {
       // Show specific firebase errors nicely via alert if registration fails
       alert(err.message || 'Error en el proceso de autenticación');
-    }
-  };
-
-  const handleContactAdminWhatsApp = () => {
-    const adminWhatsAppNumber = import.meta.env.VITE_ADMIN_WHATSAPP_NUMBER || '51999999999';
-    const cleanNumber = adminWhatsAppNumber.replace(/[^0-9]/g, '');
-    const prefilledText = `¡Hola! Me gustaría registrar mi restaurante en SmartMenu Pro pero no tengo un código de invitación B2B. ¿Podrían proporcionarme un código de acceso o brindarme más información?`;
-
-    const whatsAppLink = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(prefilledText)}`;
-    window.open(whatsAppLink, '_blank');
-  };
-
-  const handleSaveBranding = async () => {
-    try {
-      const cleanSlug = generateSlug(brandSlug);
-      if (!cleanSlug) {
-        alert('Por favor ingrese un enlace personalizado (slug) válido.');
-        return;
-      }
-
-      // Verify custom slug uniqueness if modified
-      if (cleanSlug !== restaurant?.slug) {
-        const existing = await MenuService.getRestaurantBySlug(cleanSlug);
-        if (existing) {
-          alert(`El enlace personalizado "${cleanSlug}" ya está en uso por otro restaurante. Elija un nombre diferente.`);
-          return;
-        }
-      }
-
-      await saveRestaurantSettings(brandName, brandPrimary, brandSecondary, showVoice, cleanSlug);
-      alert('¡Configuración de marca guardada con éxito!');
-    } catch (err) {
-      alert('Error guardando la configuración de marca.');
     }
   };
 
@@ -463,43 +412,8 @@ export const AdminPage: React.FC = () => {
           </Container>
         </Box>
 
-        {/* Footer Area with B2B Support */}
-        <Box 
-          component="footer" 
-          sx={{ 
-            bgcolor: 'white', 
-            py: 3, 
-            textAlign: 'center', 
-            borderTop: '1px solid #e0e0e0',
-            width: '100%',
-            mt: 'auto'
-          }}
-        >
-          <Container maxWidth="md">
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, fontWeight: 500 }}>
-              © 2026 SmartMenu Pro. Todos los derechos reservados.
-            </Typography>
-            <Typography variant="body2" color="text.primary" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
-              ¿Quieres un menú digital inteligente para tu negocio o necesitas ayuda con tu acceso?{' '}
-              <Button 
-                variant="text" 
-                color="primary" 
-                onClick={handleContactAdminWhatsApp}
-                sx={{ 
-                  textTransform: 'none', 
-                  fontWeight: 'bold', 
-                  fontSize: 'inherit', 
-                  p: 0, 
-                  verticalAlign: 'baseline',
-                  textDecoration: 'underline',
-                  '&:hover': { textDecoration: 'underline', bgcolor: 'transparent' }
-                }}
-              >
-                ¡Escríbenos por WhatsApp aquí!
-              </Button>
-            </Typography>
-          </Container>
-        </Box>
+        {/* Modular corporate footer for registration help */}
+        <Footer restaurantName="SmartMenu Pro" />
       </Box>
     );
   }
@@ -556,9 +470,36 @@ export const AdminPage: React.FC = () => {
         {/* Navigation Tabs */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 1 }}>
           <Tabs value={tabValue} onChange={(_, val) => setTabValue(val)} variant="scrollable" scrollButtons="auto">
-            <Tab label="Gestión del Menú" icon={<RestaurantMenu />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
-            <Tab label="Personalización de Marca" icon={<Palette />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
-            <Tab label="Código QR y Asistente de Voz" icon={<QrCode />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
+            <Tab 
+              label={
+                <Box sx={{ display: { xs: tabValue === 0 ? 'inline' : 'none', sm: 'inline' } }}>
+                  Menú
+                </Box>
+              } 
+              icon={<RestaurantMenu />} 
+              iconPosition="start" 
+              sx={{ fontWeight: 'bold' }} 
+            />
+            <Tab 
+              label={
+                <Box sx={{ display: { xs: tabValue === 1 ? 'inline' : 'none', sm: 'inline' } }}>
+                  Personalización
+                </Box>
+              } 
+              icon={<Palette />} 
+              iconPosition="start" 
+              sx={{ fontWeight: 'bold' }} 
+            />
+            <Tab 
+              label={
+                <Box sx={{ display: { xs: tabValue === 2 ? 'inline' : 'none', sm: 'inline' } }}>
+                  Código QR
+                </Box>
+              } 
+              icon={<QrCode />} 
+              iconPosition="start" 
+              sx={{ fontWeight: 'bold' }} 
+            />
           </Tabs>
         </Box>
 
@@ -706,101 +647,10 @@ export const AdminPage: React.FC = () => {
         {/* TAB 2: PERSONALIZACION DE MARCA (WHITE-LABEL) */}
         {/* --------------------------------------------------------- */}
         <CustomTabPanel value={tabValue} index={1}>
-          <Paper elevation={2} sx={{ p: 4, borderRadius: 4, bgcolor: 'white' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-              <Palette color="primary" />
-              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Configuración de Marca Blanca</Typography>
-            </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-              Configura cómo se verá tu menú digital para tus clientes. Modifica el nombre, el enlace personalizado y los colores principales del sistema. El panel del cliente se adaptará inmediatamente.
-            </Typography>
-
-            <Grid container spacing={4}>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Stack spacing={3}>
-                  <TextField
-                    label="Nombre Comercial"
-                    fullWidth
-                    value={brandName}
-                    onChange={(e) => setBrandName(e.target.value)}
-                  />
-
-                  <TextField
-                    label="Enlace Personalizado (URL Slug)"
-                    fullWidth
-                    value={brandSlug}
-                    onChange={(e) => setBrandSlug(generateSlug(e.target.value))}
-                    helperText={`Tu menú se publicará en: ${window.location.origin}/?r=${brandSlug}`}
-                  />
-                  
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Color Primario (Encabezado y botones)</Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Box component="input" type="color" value={brandPrimary} onChange={(e) => setBrandPrimary(e.target.value)} sx={{ width: 50, height: 40, border: 'none', borderRadius: 2, cursor: 'pointer' }} />
-                      <TextField size="small" value={brandPrimary} onChange={(e) => setBrandPrimary(e.target.value)} />
-                    </Box>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Color Secundario (Chips y etiquetas)</Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Box component="input" type="color" value={brandSecondary} onChange={(e) => setBrandSecondary(e.target.value)} sx={{ width: 50, height: 40, border: 'none', borderRadius: 2, cursor: 'pointer' }} />
-                      <TextField size="small" value={brandSecondary} onChange={(e) => setBrandSecondary(e.target.value)} />
-                    </Box>
-                  </Box>
-
-                  <Box sx={{ mt: 1 }}>
-                    <FormControlLabel
-                      control={
-                        <Checkbox 
-                          checked={showVoice} 
-                          onChange={(e) => setShowVoice(e.target.checked)} 
-                          color="primary"
-                        />
-                      }
-                      label="Activar sección 'SmartMenu Voice Assistant' en menú público"
-                    />
-                  </Box>
-                </Stack>
-              </Grid>
-
-              <Grid size={{ xs: 12, md: 6 }}>
-                {/* Visual Preview */}
-                <Paper variant="outlined" sx={{ p: 3, borderRadius: 4, textAlign: 'center', bgcolor: '#fbfbfb' }}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 'bold', mb: 2 }}>Vista previa del Menú</Typography>
-                  <Paper 
-                    elevation={0} 
-                    sx={{ 
-                      p: 2, 
-                      color: 'white', 
-                      bgcolor: brandPrimary, 
-                      borderRadius: 3,
-                      mb: 2 
-                    }}
-                  >
-                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{brandName || 'Tu Restaurante'}</Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.8 }}>Menú de Hoy</Typography>
-                  </Paper>
-                  <Box sx={{ display: 'flex', direction: 'row', gap: 1, justifyContent: 'center' }}>
-                    <Chip label="Platos Fuertes" size="small" sx={{ bgcolor: brandPrimary, color: 'white', fontWeight: 'bold' }} />
-                    <Chip label="Entradas" size="small" variant="outlined" sx={{ color: brandSecondary, borderColor: brandSecondary }} />
-                  </Box>
-                </Paper>
-              </Grid>
-            </Grid>
-
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
-              <Button
-                variant="contained"
-                startIcon={<Save />}
-                onClick={handleSaveBranding}
-                disabled={loadingAction}
-                sx={{ borderRadius: 3, px: 4, fontWeight: 'bold' }}
-              >
-                Guardar Cambios de Marca
-              </Button>
-            </Box>
-          </Paper>
+          <BrandManager 
+            restaurant={restaurant} 
+            saveRestaurantSettings={saveRestaurantSettings} 
+          />
         </CustomTabPanel>
 
         {/* --------------------------------------------------------- */}
@@ -821,7 +671,7 @@ export const AdminPage: React.FC = () => {
 
                 {qrCodeUrl ? (
                   <Box sx={{ p: 2, bgcolor: '#f9f9f9', display: 'inline-block', borderRadius: 4, mb: 3 }}>
-                    <Box component="img" src={qrCodeUrl} alt="Restaurant QR" sx={{ width: 200, height: 250, display: 'block' }} />
+                    <Box component="img" src={qrCodeUrl} alt="Restaurant QR" sx={{ width: 250, height: 250, display: 'block' }} />
                   </Box>
                 ) : (
                   <CircularProgress />
