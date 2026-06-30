@@ -2,6 +2,9 @@ import { useState } from 'react';
 
 export const useFooter = (restaurantName?: string) => {
   const [isLeadOpen, setIsLeadOpen] = useState<boolean>(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState<boolean>(false);
+  const [isTermsOpen, setIsTermsOpen] = useState<boolean>(false);
+  
   const [leadName, setLeadName] = useState<string>('');
   const [leadMessage, setLeadMessage] = useState<string>('');
 
@@ -35,10 +38,14 @@ export const useFooter = (restaurantName?: string) => {
 
   return {
     isLeadOpen,
+    isPrivacyOpen,
+    isTermsOpen,
     leadName,
     leadMessage,
     setLeadName,
     setLeadMessage,
+    setIsPrivacyOpen,
+    setIsTermsOpen,
     handleOpenLead,
     handleCloseLead,
     handleLeadSubmit,
