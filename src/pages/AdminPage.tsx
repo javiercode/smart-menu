@@ -615,24 +615,44 @@ export const AdminPage: React.FC = () => {
                             variant="outlined" 
                             sx={{ 
                               p: 2, 
-                              borderRadius: 3, 
+                              borderRadius: 4, 
                               display: 'flex', 
+                              flexDirection: { xs: 'column', sm: 'row' },
                               justifyContent: 'space-between', 
-                              alignItems: 'center',
+                              alignItems: { xs: 'stretch', sm: 'center' },
+                              gap: 2,
                               bgcolor: item.available ? 'transparent' : '#fafafa',
-                              borderColor: item.available ? '#e0e0e0' : '#ffebee'
+                              borderColor: item.available ? '#e0e0e0' : '#ffebee',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                              transition: 'all 0.25s ease',
+                              '&:hover': {
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                                borderColor: item.available ? '#ccc' : '#ffebee'
+                              }
                             }}
                           >
-                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', width: '70%' }}>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              flexDirection: { xs: 'column', sm: 'row' }, 
+                              gap: 2, 
+                              alignItems: { xs: 'flex-start', sm: 'center' }, 
+                              width: '100%' 
+                            }}>
                               {item.imageUrl && (
-                                <Box sx={{ position: 'relative', width: 60, height: 60, flexShrink: 0 }}>
+                                <Box sx={{ 
+                                  position: 'relative', 
+                                  width: { xs: '100%', sm: 60 }, 
+                                  height: { xs: 150, sm: 60 }, 
+                                  flexShrink: 0,
+                                  borderRadius: 2,
+                                  overflow: 'hidden'
+                                }}>
                                   <Box 
                                     component="img" 
                                     src={item.imageUrl} 
                                     sx={{ 
-                                      width: 60, 
-                                      height: 60, 
-                                      borderRadius: 2, 
+                                      width: '100%', 
+                                      height: '100%', 
                                       objectFit: 'cover',
                                       filter: item.available ? 'none' : 'grayscale(40%) brightness(0.7)'
                                     }} 
@@ -649,20 +669,19 @@ export const AdminPage: React.FC = () => {
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         bgcolor: 'rgba(0, 0, 0, 0.4)',
-                                        borderRadius: 2,
                                       }}
                                     >
                                       <Typography 
                                         sx={{ 
-                                          fontSize: '0.65rem', 
+                                          fontSize: { xs: '0.9rem', sm: '0.65rem' }, 
                                           fontWeight: 'bold', 
                                           color: '#ffc107', 
-                                          border: '1.5px solid #ffc107', 
-                                          borderRadius: '3px',
-                                          px: 0.5,
-                                          py: 0.1,
+                                          border: { xs: '2px solid #ffc107', sm: '1.5px solid #ffc107' }, 
+                                          borderRadius: '4px',
+                                          px: 1,
+                                          py: 0.3,
                                           textTransform: 'uppercase',
-                                          transform: 'rotate(-10deg)',
+                                          transform: 'rotate(-8deg)',
                                         }}
                                       >
                                         Agotado
@@ -672,35 +691,83 @@ export const AdminPage: React.FC = () => {
                                 </Box>
                               )}
                               <Box sx={{ width: '100%' }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 0.5 }}>
                                   <Typography variant="subtitle1" sx={{ fontWeight: 'bold', lineBreak: 'anywhere' }}>{item.name}</Typography>
                                   <Chip label={categoryTranslations[item.category]} size="small" variant="outlined" />
                                   {!item.available && <Chip label="Agotado" size="small" color="error" />}
                                 </Box>
-                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: '100%', lineBreak: 'anywhere' }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: '100%', lineBreak: 'anywhere', mb: 1 }}>
                                   {item.description}
                                 </Typography>
-                                <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 'bold', mt: 0.5 }}>
+                                <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 'bold' }}>
                                   ${item.price.toFixed(2)}
                                 </Typography>
                               </Box>
                             </Box>
 
-                            <Stack direction="row" spacing={1}>
+                            <Divider sx={{ display: { xs: 'block', sm: 'none' }, my: 0.5 }} />
+
+                            <Stack 
+                              direction="row" 
+                              spacing={1.5} 
+                              sx={{ 
+                                justifyContent: { xs: 'flex-end', sm: 'flex-start' }, 
+                                alignSelf: { xs: 'stretch', sm: 'center' } 
+                              }}
+                            >
                               <IconButton 
                                 color={item.available ? "warning" : "success"} 
                                 onClick={() => handleToggleAvailable(item)} 
                                 size="small" 
                                 title={item.available ? "Marcar como agotado" : "Marcar como disponible"}
-                                sx={{ border: '1px solid #e0e0e0' }}
+                                sx={{ 
+                                  border: '1px solid #e0e0e0', 
+                                  flexGrow: { xs: 1, sm: 0 }, 
+                                  borderRadius: { xs: 2, sm: '50%' }, 
+                                  py: { xs: 1, sm: 0.5 },
+                                  px: { xs: 2, sm: 0.5 }
+                                }}
                               >
                                 {item.available ? <NoFood fontSize="small" /> : <Restaurant fontSize="small" />}
+                                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' }, ml: 1, fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                  {/* {item.available ? 'Agotar' : 'Habilitar'} */}
+                                </Box>
                               </IconButton>
-                              <IconButton color="primary" onClick={() => openEditDish(item)} size="small" sx={{ border: '1px solid #e0e0e0' }}>
+                              <IconButton 
+                                color="primary" 
+                                onClick={() => openEditDish(item)} 
+                                size="small" 
+                                title="Editar Plato"
+                                sx={{ 
+                                  border: '1px solid #e0e0e0', 
+                                  flexGrow: { xs: 1, sm: 0 }, 
+                                  borderRadius: { xs: 2, sm: '50%' }, 
+                                  py: { xs: 1, sm: 0.5 },
+                                  px: { xs: 2, sm: 0.5 }
+                                }}
+                              >
                                 <Edit fontSize="small" />
+                                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' }, ml: 1, fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                  {/* Editar */}
+                                </Box>
                               </IconButton>
-                              <IconButton color="error" onClick={() => handleDishDelete(item.id)} size="small" sx={{ border: '1px solid #e0e0e0' }}>
+                              <IconButton 
+                                color="error" 
+                                onClick={() => handleDishDelete(item.id)} 
+                                size="small" 
+                                title="Eliminar"
+                                sx={{ 
+                                  border: '1px solid #e0e0e0', 
+                                  flexGrow: { xs: 1, sm: 0 }, 
+                                  borderRadius: { xs: 2, sm: '50%' }, 
+                                  py: { xs: 1, sm: 0.5 },
+                                  px: { xs: 2, sm: 0.5 }
+                                }}
+                              >
                                 <Delete fontSize="small" />
+                                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' }, ml: 1, fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                  {/* Borrar */}
+                                </Box>
                               </IconButton>
                             </Stack>
                           </Paper>
