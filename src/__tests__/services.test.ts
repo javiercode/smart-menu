@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { UserProfile, Restaurant, DailyMenu, DayOfWeek } from '../core/types';
 import type { IAuthService } from '../services/AuthService';
 import type { IMenuService } from '../services/MenuService';
+import { getLocalDateString, resolveSoldOutItems } from '../core/utils/dateUtils';
 
 // ---------------------------------------------------------
 // 1. High-Fidelity Test Mock for AuthService
@@ -121,7 +122,11 @@ class MockMenuService implements IMenuService {
 
   async getMenuByDay(restaurantId: string, day: DayOfWeek): Promise<DailyMenu | null> {
     const raw = localStorage.getItem(`${this.menuKeyPrefix}${restaurantId}_${day}`);
-    return raw ? JSON.parse(raw) : null;
+    if (raw) {
+      const menu = JSON.parse(raw) as DailyMenu;
+      return resolveSoldOutItems(menu, getLocalDateString());
+    }
+    return null;
   }
 
   async saveMenu(restaurantId: string, menu: DailyMenu): Promise<void> {
@@ -225,6 +230,60 @@ describe('SmartMenu Pro - Local Environments Unit Tests', () => {
       expect(fetched?.day).toBe(targetDay);
       expect(fetched?.items.length).toBe(1);
       expect(fetched?.items[0].imageUrl).toContain('base64');
+    });
+
+    it('should clear sold-out status of menu items the next day', async () => {
+      const targetDay: DayOfWeek = 'miercoles';
+      const todayStr = getLocalDateString();
+      
+      // Calculate a date that is from yesterday/past
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = getLocalDateString(yesterday);
+
+      const menuPayload: DailyMenu = {
+        id: targetDay,
+        day: targetDay,
+        restaurantId: resId,
+        items: [
+          {
+            id: 'item_sold_out_today',
+            name: 'Plato Agotado Hoy',
+            description: 'Debe continuar agotado hoy.',
+            price: 10.00,
+            category: 'main',
+            available: false,
+            soldOutDate: todayStr
+          },
+          {
+            id: 'item_sold_out_yesterday',
+            name: 'Plato Agotado Ayer',
+            description: 'Debe ser restaurado a disponible hoy automáticamente.',
+            price: 12.00,
+            category: 'main',
+            available: false,
+            soldOutDate: yesterdayStr
+          }
+        ]
+      };
+
+      await MenuService.saveMenu(resId, menuPayload);
+
+      const fetched = await MenuService.getMenuByDay(resId, targetDay);
+      expect(fetched).toBeDefined();
+      expect(fetched?.items.length).toBe(2);
+
+      // item_sold_out_today should remain sold out (available: false)
+      const itemToday = fetched?.items.find(i => i.id === 'item_sold_out_today');
+      expect(itemToday).toBeDefined();
+      expect(itemToday?.available).toBe(false);
+      expect(itemToday?.soldOutDate).toBe(todayStr);
+
+      // item_sold_out_yesterday should be automatically marked as available again (available: true)
+      const itemYesterday = fetched?.items.find(i => i.id === 'item_sold_out_yesterday');
+      expect(itemYesterday).toBeDefined();
+      expect(itemYesterday?.available).toBe(true);
+      expect(itemYesterday?.soldOutDate).toBeUndefined();
     });
   });
 });

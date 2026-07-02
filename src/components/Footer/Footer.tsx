@@ -121,23 +121,17 @@ export const Footer: React.FC<FooterProps> = ({ restaurantName }) => {
           </Typography>
           
           <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Button
+
+            <Button 
+              variant="contained" 
+              color="primary" 
               component={Link}
               to="/admin"
-              variant="outlined"
+              // variant="outlined"
               size="small"
-              sx={{ 
-                borderColor: 'rgba(255,255,255,0.2)',
-                color: 'rgba(255,255,255,0.8)',
-                borderRadius: 3, 
-                textTransform: 'none', 
-                fontWeight: 600, 
-                fontSize: '0.75rem',
-                px: 2,
-                '&:hover': { borderColor: 'white', color: 'white', bgcolor: 'rgba(255, 255, 255, 0.05)' }
-              }}
+              sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 'bold', px: 3 }}
             >
-              🔑 Acceso Administrador (Panel de Control)
+              🔑 Panel de Control
             </Button>
           </Box>
         </Box>

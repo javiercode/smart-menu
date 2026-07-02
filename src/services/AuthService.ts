@@ -13,6 +13,7 @@ import {
 import { auth as fbAuth, db as fbDb } from '../core/firebase/config';
 import { MenuService } from './MenuService';
 import type { UserProfile, Restaurant } from '../core/types';
+import { getLocalDateString } from '../core/utils/dateUtils';
 
 export interface IAuthService {
   signIn(email: string, password: string): Promise<UserProfile>;
@@ -108,7 +109,7 @@ class FirebaseAuthService implements IAuthService {
     if (codeData.used) {
       throw new Error('Este código de invitación ya ha sido utilizado.');
     }
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDateString();
     if (codeData.expirationDate && codeData.expirationDate < todayStr) {
       throw new Error('Este código de invitación ha expirado.');
     }

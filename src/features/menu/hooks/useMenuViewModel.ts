@@ -1,25 +1,20 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { MenuService } from '../../../services/MenuService';
 import type { DailyMenu, Restaurant, DayOfWeek } from '../../../core/types';
+import { 
+  getLocalDateString, 
+  getDayOfWeekFromDate, 
+  getCurrentDayOfWeek 
+} from '../../../core/utils/dateUtils';
 
 export const DAYS_ORDER: DayOfWeek[] = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 
-export const getDayOfWeekFromDate = (dateStr: string): DayOfWeek => {
-  const d = new Date(dateStr + 'T12:00:00'); // Safe mid-day to prevent timezone shifts
-  const jsDayIndex = d.getDay(); // 0 is Sunday, 1 is Monday, etc.
-  const mapping: DayOfWeek[] = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
-  return mapping[jsDayIndex];
-};
-
-export const getCurrentDayOfWeek = (): DayOfWeek => {
-  const todayStr = new Date().toISOString().split('T')[0];
-  return getDayOfWeekFromDate(todayStr);
-};
+export { getDayOfWeekFromDate, getCurrentDayOfWeek };
 
 export const useMenuViewModel = (restaurantSlug: string, initialDate?: string) => {
   // We keep the actual calendar date state (YYYY-MM-DD)
   const [date, setDateState] = useState<string>(
-    initialDate || new Date().toISOString().split('T')[0]
+    initialDate || getLocalDateString()
   );
   const [menu, setMenu] = useState<DailyMenu | null>(null);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
@@ -61,11 +56,11 @@ export const useMenuViewModel = (restaurantSlug: string, initialDate?: string) =
   }, [restaurantSlug]);
 
   // Load daily menu for the resolved weekday using the resolved restaurant's database ID
-  const loadMenu = useCallback(async (targetDay: DayOfWeek, actualResId: string) => {
+  const loadMenu = useCallback(async (targetDay: DayOfWeek, actualResId: string, targetDate?: string) => {
     setLoading(true);
     setError(null);
     try {
-      const dailyMenu = await MenuService.getMenuByDay(actualResId, targetDay);
+      const dailyMenu = await MenuService.getMenuByDay(actualResId, targetDay, targetDate);
       setMenu(dailyMenu);
     } catch (err: any) {
       setError(err.message || 'Error cargando el menú del día');
@@ -77,9 +72,9 @@ export const useMenuViewModel = (restaurantSlug: string, initialDate?: string) =
 
   useEffect(() => {
     if (restaurant) {
-      loadMenu(resolvedDay, restaurant.id);
+      loadMenu(resolvedDay, restaurant.id, date);
     }
-  }, [resolvedDay, restaurant, loadMenu]);
+  }, [resolvedDay, restaurant, date, loadMenu]);
 
   const setDate = (newDate: string) => {
     setDateState(newDate);
@@ -88,7 +83,7 @@ export const useMenuViewModel = (restaurantSlug: string, initialDate?: string) =
   const changeDay = (offset: number) => {
     const currentDate = new Date(date + 'T12:00:00'); // Safe mid-day
     currentDate.setDate(currentDate.getDate() + offset);
-    setDateState(currentDate.toISOString().split('T')[0]);
+    setDateState(getLocalDateString(currentDate));
   };
 
   const goToNextDay = () => changeDay(1);
@@ -104,7 +99,7 @@ export const useMenuViewModel = (restaurantSlug: string, initialDate?: string) =
     setDate,
     goToNextDay,
     goToPreviousDay,
-    refresh: () => restaurant && loadMenu(resolvedDay, restaurant.id),
+    refresh: () => restaurant && loadMenu(resolvedDay, restaurant.id, date),
   };
 };
 export type UseMenuViewModelReturn = ReturnType<typeof useMenuViewModel>;

@@ -12,14 +12,41 @@ export const MenuItem: React.FC<MenuItemProps> = ({ item, categoryLabel }) => {
   return (
     <Card className="menu-item-card">
       {item.imageUrl && (
-        <Box className="menu-item-media-container">
+        <Box className="menu-item-media-container" sx={{ position: 'relative' }}>
           <CardMedia
             component="img"
             height="180"
             image={item.imageUrl}
             alt={item.name}
             className="menu-item-media"
+            sx={{ filter: item.available ? 'none' : 'grayscale(30%) brightness(0.7)' }}
           />
+          {!item.available && (
+            <Box 
+              className="sold-out-stamp"
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%) rotate(-15deg)',
+                border: '4px solid #d32f2f',
+                color: '#d32f2f',
+                padding: '4px 12px',
+                fontSize: '1.5rem',
+                fontWeight: '900',
+                borderRadius: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '2px',
+                backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.3)',
+                userSelect: 'none',
+                pointerEvents: 'none',
+                zIndex: 2,
+              }}
+            >
+              Agotado
+            </Box>
+          )}
         </Box>
       )}
       <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>

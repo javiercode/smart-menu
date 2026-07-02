@@ -8,6 +8,7 @@ export interface MenuItem {
   imageUrl?: string;
   category: 'starter' | 'main' | 'dessert' | 'drink' | 'other';
   available: boolean;
+  soldOutDate?: string;
 }
 
 export interface DailyMenu {

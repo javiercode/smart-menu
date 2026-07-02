@@ -40,7 +40,9 @@ import {
   Mic, 
   OpenInNew,
   Palette,
-  CloudUpload
+  CloudUpload,
+  NoFood,
+  Restaurant
 } from '@mui/icons-material';
 import { useAdminViewModel } from '../features/admin/hooks/useAdminViewModel';
 import { DAYS_ORDER } from '../features/menu/hooks/useMenuViewModel';
@@ -48,6 +50,7 @@ import { BrandManager } from '../components/BrandManager';
 import { Footer } from '../components/Footer';
 import type { MenuItem, DayOfWeek } from '../core/types';
 import { isFirebaseConfigured } from '../core/firebase/config';
+import { getLocalDateString } from '../core/utils/dateUtils';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -183,16 +186,6 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  const handleSaveMenu = async () => {
-    try {
-      await saveCurrentMenu(localItems);
-      setLocalChanges(false);
-      alert('¡El menú diario ha sido actualizado en la base de datos!');
-    } catch (err) {
-      alert('Error guardando el menú.');
-    }
-  };
-
   // Dish CRUD actions
   const openAddDish = () => {
     setEditingDish(null);
@@ -232,7 +225,7 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  const handleDishSaveSubmit = () => {
+  const handleDishSaveSubmit = async () => {
     if (!dishName.trim()) {
       alert('Por favor ingrese el nombre del plato');
       return;
@@ -250,7 +243,8 @@ export const AdminPage: React.FC = () => {
       price: parsedPrice,
       category: dishCategory,
       imageUrl: dishImageUrl.trim() || undefined,
-      available: dishAvailable
+      available: dishAvailable,
+      soldOutDate: dishAvailable ? undefined : getLocalDateString()
     };
 
     let updatedList: MenuItem[];
@@ -263,13 +257,51 @@ export const AdminPage: React.FC = () => {
     setLocalItems(updatedList);
     setLocalChanges(true);
     setIsDishOpen(false);
+
+    try {
+      await saveCurrentMenu(updatedList);
+      setLocalChanges(false);
+    } catch (err: any) {
+      alert('Error guardando los cambios del plato: ' + (err.message || err));
+    }
   };
 
-  const handleDishDelete = (id: string) => {
+  const handleDishDelete = async (id: string) => {
     if (window.confirm('¿Está seguro de que desea eliminar este plato?')) {
       const updatedList = localItems.filter(item => item.id !== id);
       setLocalItems(updatedList);
       setLocalChanges(true);
+
+      try {
+        await saveCurrentMenu(updatedList);
+        setLocalChanges(false);
+      } catch (err: any) {
+        alert('Error eliminando el plato: ' + (err.message || err));
+      }
+    }
+  };
+
+  const handleToggleAvailable = async (item: MenuItem) => {
+    const todayStr = getLocalDateString();
+    const updatedItems = localItems.map(listItem => {
+      if (listItem.id === item.id) {
+        const nextAvailable = !listItem.available;
+        return {
+          ...listItem,
+          available: nextAvailable,
+          soldOutDate: nextAvailable ? undefined : todayStr
+        };
+      }
+      return listItem;
+    });
+    setLocalItems(updatedItems);
+    setLocalChanges(true);
+
+    try {
+      await saveCurrentMenu(updatedItems);
+      setLocalChanges(false);
+    } catch (err: any) {
+      alert('Error actualizando disponibilidad del plato: ' + (err.message || err));
     }
   };
 
@@ -593,7 +625,51 @@ export const AdminPage: React.FC = () => {
                           >
                             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', width: '70%' }}>
                               {item.imageUrl && (
-                                <Box component="img" src={item.imageUrl} sx={{ width: 60, height: 60, borderRadius: 2, objectFit: 'cover' }} />
+                                <Box sx={{ position: 'relative', width: 60, height: 60, flexShrink: 0 }}>
+                                  <Box 
+                                    component="img" 
+                                    src={item.imageUrl} 
+                                    sx={{ 
+                                      width: 60, 
+                                      height: 60, 
+                                      borderRadius: 2, 
+                                      objectFit: 'cover',
+                                      filter: item.available ? 'none' : 'grayscale(40%) brightness(0.7)'
+                                    }} 
+                                  />
+                                  {!item.available && (
+                                    <Box 
+                                      sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        bgcolor: 'rgba(0, 0, 0, 0.4)',
+                                        borderRadius: 2,
+                                      }}
+                                    >
+                                      <Typography 
+                                        sx={{ 
+                                          fontSize: '0.65rem', 
+                                          fontWeight: 'bold', 
+                                          color: '#ffc107', 
+                                          border: '1.5px solid #ffc107', 
+                                          borderRadius: '3px',
+                                          px: 0.5,
+                                          py: 0.1,
+                                          textTransform: 'uppercase',
+                                          transform: 'rotate(-10deg)',
+                                        }}
+                                      >
+                                        Agotado
+                                      </Typography>
+                                    </Box>
+                                  )}
+                                </Box>
                               )}
                               <Box sx={{ width: '100%' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -611,6 +687,15 @@ export const AdminPage: React.FC = () => {
                             </Box>
 
                             <Stack direction="row" spacing={1}>
+                              <IconButton 
+                                color={item.available ? "warning" : "success"} 
+                                onClick={() => handleToggleAvailable(item)} 
+                                size="small" 
+                                title={item.available ? "Marcar como agotado" : "Marcar como disponible"}
+                                sx={{ border: '1px solid #e0e0e0' }}
+                              >
+                                {item.available ? <NoFood fontSize="small" /> : <Restaurant fontSize="small" />}
+                              </IconButton>
                               <IconButton color="primary" onClick={() => openEditDish(item)} size="small" sx={{ border: '1px solid #e0e0e0' }}>
                                 <Edit fontSize="small" />
                               </IconButton>
@@ -622,20 +707,6 @@ export const AdminPage: React.FC = () => {
                         ))}
                       </Stack>
                     )}
-
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
-                      <Button
-                        variant="contained"
-                        color="success"
-                        size="large"
-                        startIcon={<Save />}
-                        onClick={handleSaveMenu}
-                        disabled={loadingAction || !hasMenuChanges}
-                        sx={{ borderRadius: 3, px: 4, fontWeight: 'bold' }}
-                      >
-                        {loadingAction ? 'Guardando...' : `Guardar Menú del ${dayTranslations[selectedDay]}`}
-                      </Button>
-                    </Box>
                   </>
                 )}
               </Paper>

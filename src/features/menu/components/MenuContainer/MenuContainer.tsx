@@ -23,6 +23,7 @@ import {
 import { useMenu } from './useMenu';
 import { MenuList } from '../MenuList';
 import type { DayOfWeek } from '../../../../core/types';
+import { getLocalDateString } from '../../../../core/utils/dateUtils';
 import './MenuContainer.css';
 
 const dayTranslations: Record<DayOfWeek, string> = {
@@ -74,7 +75,7 @@ export const MenuContainer: React.FC<MenuContainerProps> = ({ restaurantSlug }) 
   }, [date]);
 
   const isToday = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDateString();
     return date === todayStr;
   }, [date]);
 
