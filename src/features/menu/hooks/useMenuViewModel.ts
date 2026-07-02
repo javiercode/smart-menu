@@ -61,7 +61,16 @@ export const useMenuViewModel = (restaurantSlug: string, initialDate?: string) =
     setError(null);
     try {
       const dailyMenu = await MenuService.getMenuByDay(actualResId, targetDay, targetDate);
-      setMenu(dailyMenu);
+      if (dailyMenu) {
+        // Logical deletion: filter out disabled dishes from public menu
+        const activeItems = dailyMenu.items.filter(item => !item.disabled);
+        setMenu({
+          ...dailyMenu,
+          items: activeItems
+        });
+      } else {
+        setMenu(null);
+      }
     } catch (err: any) {
       setError(err.message || 'Error cargando el menú del día');
       setMenu(null);

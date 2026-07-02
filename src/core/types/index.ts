@@ -9,6 +9,7 @@ export interface MenuItem {
   category: 'starter' | 'main' | 'dessert' | 'drink' | 'other';
   available: boolean;
   soldOutDate?: string;
+  disabled?: boolean;
 }
 
 export interface DailyMenu {

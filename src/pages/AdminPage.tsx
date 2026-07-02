@@ -42,7 +42,9 @@ import {
   Palette,
   CloudUpload,
   NoFood,
-  Restaurant
+  Restaurant,
+  Visibility,
+  VisibilityOff
 } from '@mui/icons-material';
 import { useAdminViewModel } from '../features/admin/hooks/useAdminViewModel';
 import { DAYS_ORDER } from '../features/menu/hooks/useMenuViewModel';
@@ -302,6 +304,27 @@ export const AdminPage: React.FC = () => {
       setLocalChanges(false);
     } catch (err: any) {
       alert('Error actualizando disponibilidad del plato: ' + (err.message || err));
+    }
+  };
+
+  const handleToggleDisabled = async (item: MenuItem) => {
+    const updatedItems = localItems.map(listItem => {
+      if (listItem.id === item.id) {
+        return {
+          ...listItem,
+          disabled: !listItem.disabled
+        };
+      }
+      return listItem;
+    });
+    setLocalItems(updatedItems);
+    setLocalChanges(true);
+
+    try {
+      await saveCurrentMenu(updatedItems);
+      setLocalChanges(false);
+    } catch (err: any) {
+      alert('Error actualizando visibilidad del plato: ' + (err.message || err));
     }
   };
 
@@ -621,13 +644,14 @@ export const AdminPage: React.FC = () => {
                               justifyContent: 'space-between', 
                               alignItems: { xs: 'stretch', sm: 'center' },
                               gap: 2,
-                              bgcolor: item.available ? 'transparent' : '#fafafa',
-                              borderColor: item.available ? '#e0e0e0' : '#ffebee',
+                              bgcolor: item.disabled ? '#f5f5f5' : (item.available ? 'transparent' : '#fafafa'),
+                              borderColor: item.disabled ? '#e0e0e0' : (item.available ? '#e0e0e0' : '#ffebee'),
+                              opacity: item.disabled ? 0.65 : 1,
                               boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
                               transition: 'all 0.25s ease',
                               '&:hover': {
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-                                borderColor: item.available ? '#ccc' : '#ffebee'
+                                borderColor: item.disabled ? '#ccc' : (item.available ? '#ccc' : '#ffebee')
                               }
                             }}
                           >
@@ -694,7 +718,8 @@ export const AdminPage: React.FC = () => {
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 0.5 }}>
                                   <Typography variant="subtitle1" sx={{ fontWeight: 'bold', lineBreak: 'anywhere' }}>{item.name}</Typography>
                                   <Chip label={categoryTranslations[item.category]} size="small" variant="outlined" />
-                                  {!item.available && <Chip label="Agotado" size="small" color="error" />}
+                                  {item.disabled && <Chip label="Inactivo" size="small" color="default" />}
+                                  {!item.disabled && !item.available && <Chip label="Agotado" size="small" color="error" />}
                                 </Box>
                                 <Typography variant="body2" color="text.secondary" sx={{ maxWidth: '100%', lineBreak: 'anywhere', mb: 1 }}>
                                   {item.description}
@@ -716,6 +741,24 @@ export const AdminPage: React.FC = () => {
                               }}
                             >
                               <IconButton 
+                                color={item.disabled ? "default" : "info"} 
+                                onClick={() => handleToggleDisabled(item)} 
+                                size="small" 
+                                title={item.disabled ? "Habilitar en el menú público" : "Inhabilitar (Ocultar del menú público)"}
+                                sx={{ 
+                                  border: '1px solid #e0e0e0', 
+                                  flexGrow: { xs: 1, sm: 0 }, 
+                                  borderRadius: { xs: 2, sm: '50%' }, 
+                                  py: { xs: 1, sm: 0.5 },
+                                  px: { xs: 2, sm: 0.5 }
+                                }}
+                              >
+                                {item.disabled ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' }, ml: 1, fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                  {item.disabled ? 'Mostrar' : 'Ocultar'}
+                                </Box>
+                              </IconButton>
+                              <IconButton 
                                 color={item.available ? "warning" : "success"} 
                                 onClick={() => handleToggleAvailable(item)} 
                                 size="small" 
@@ -729,9 +772,7 @@ export const AdminPage: React.FC = () => {
                                 }}
                               >
                                 {item.available ? <NoFood fontSize="small" /> : <Restaurant fontSize="small" />}
-                                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' }, ml: 1, fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                  {/* {item.available ? 'Agotar' : 'Habilitar'} */}
-                                </Box>
+                                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' }, ml: 1, fontSize: '0.85rem', fontWeight: 'bold' }}/>
                               </IconButton>
                               <IconButton 
                                 color="primary" 
@@ -747,9 +788,7 @@ export const AdminPage: React.FC = () => {
                                 }}
                               >
                                 <Edit fontSize="small" />
-                                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' }, ml: 1, fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                  {/* Editar */}
-                                </Box>
+                                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' }, ml: 1, fontSize: '0.85rem', fontWeight: 'bold' }}/>
                               </IconButton>
                               <IconButton 
                                 color="error" 
@@ -765,9 +804,7 @@ export const AdminPage: React.FC = () => {
                                 }}
                               >
                                 <Delete fontSize="small" />
-                                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' }, ml: 1, fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                  {/* Borrar */}
-                                </Box>
+                                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' }, ml: 1, fontSize: '0.85rem', fontWeight: 'bold' }}/>
                               </IconButton>
                             </Stack>
                           </Paper>
